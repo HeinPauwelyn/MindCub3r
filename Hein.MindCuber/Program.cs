@@ -1,47 +1,69 @@
 ﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Lego.Ev3.Core;
 using Lego.Ev3.Desktop;
-using static System.Console;
 
-namespace Hein.MindCuber.Console
+namespace Hein.MindCuber.ConsoleProgram
 {
     class Program
     {
         private static Brick _brick;
+        private static readonly uint _oneFourthTurn = 900;
+        private static ColorSensor _colorSensor;
 
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
-            Connect();
-            Reset();
+            await Connect();
+            await OneFourthTurn();
 
-            ReadLine();
+            //await _colorSensor.MoveToPiece(ColorSensorPosition.MiddlePiece);
+            //Console.WriteLine($"Middle color: {_colorSensor.GetColor()}");
+            //await _colorSensor.MoveToPiece(ColorSensorPosition.Base);
+
+            Console.ReadLine();
         }
 
-        private async static void Reset()
+        private async static Task OneFourthTurn()
         {
-            await _brick.DirectCommand.TurnMotorAtPowerForTimeAsync(OutputPort.B, 40, 3000, false);
+
+            await _brick.DirectCommand.TurnMotorAtPowerForTimeAsync(OutputPort.C, 30, _oneFourthTurn, false);
+            Thread.Sleep(1000);
+            await _brick.DirectCommand.TurnMotorAtPowerForTimeAsync(OutputPort.C, -30, _oneFourthTurn, false);
+            Thread.Sleep(1000);
+            await _brick.DirectCommand.TurnMotorAtPowerForTimeAsync(OutputPort.C, 30, _oneFourthTurn / 2, false);
+            Thread.Sleep(1000);
+            await _brick.DirectCommand.TurnMotorAtPowerForTimeAsync(OutputPort.C, -30, _oneFourthTurn / 2, false);
         }
 
-        private async static void Connect()
+        private async static Task Connect()
         {
             _brick = new Brick(new UsbCommunication());
-            _brick.BrickChanged += BrickChanged;
+            _colorSensor = new ColorSensor(_brick);
+            _colorSensor.ColorChanged += ColorSensorChanged;
+
             await _brick.ConnectAsync();
-            await _brick.DirectCommand.PlayToneAsync(100, 3000, 100);
+
+            Console.WriteLine($"color: {_colorSensor.GetColor()}");
         }
 
-        private static void BrickChanged(object sender, BrickChangedEventArgs e)
+        private static void ColorSensorChanged(object sender, ColorSensorEventArgs e)
         {
-            float distance = e.Ports[InputPort.Four].SIValue;
-
-            if (distance <= 20)
-            {
-                WriteLine($"start: {distance}");
-            }
-            else
-            {
-                WriteLine($"nope : {distance}");
-            }
+            Console.WriteLine($"color: {e.Value}");
         }
+
+        //private static void BrickChanged(object sender, BrickChangedEventArgs e)
+        //{
+        //    float distance = e.Ports[InputPort.Four].SIValue;
+
+        //    if (distance <= 20)
+        //    {
+        //        Console.WriteLine($"start: {distance}");
+        //    }
+        //    else
+        //    {
+        //        Console.WriteLine($"nope : {distance}");
+        //    }
+        //}
     }
 }
